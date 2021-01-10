@@ -1,5 +1,8 @@
 # 업비트 트레이딩 봇
 
+## 0. 소개글
+[https://brunch.co.kr/@skykamja24/546](https://brunch.co.kr/@skykamja24/546)
+
 ## 1. 설치
 ``` bash
 # install dependencies
