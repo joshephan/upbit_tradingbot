@@ -1,7 +1,7 @@
 const moment = require("moment");
 const CandleList = require("../class/CandleList");
 const Candle = require("../class/Candle");
-const MarketList = require("../market/KRW.json");
+const Market = require("../class/MarketList");
 const chalk = require("chalk");
 const Account = require("../class/Account");
 const comma = require("../util/comma");
@@ -14,76 +14,82 @@ const comma = require("../util/comma");
  * 출력되는 값의 의미는 README.md를 참조해주세요.
  */
 
-
-let myAccount = {};
-let initMoney = 10000000;
-MarketList.forEach(v => {
-  myAccount[v.market] = new Account(initMoney);
-});
-const MARKET_LENGTH = Object.keys(myAccount).length;
-
-let initBuy = false;
-const watch = async (market) => {
-  const marketData = new CandleList({
-    market: market.market,
-    count: 1,
-    minutes: 1,
+const Filter = 'KRW'; //KRW || BTC || USDT || all
+(async (filter) =>{
+  //현재 업비트에 상장되어있는 코인 리스트를 불러온뒤 필터값으로 필터링한 결과를 가져옵니다.
+  return await new Market(filter).fetchMarkets(); 
+})(Filter).then((MarketList)=>{
+  let myAccount = {};
+  let initMoney = 10000000;
+  MarketList.forEach(v => {
+    myAccount[v.market] = new Account(initMoney);
   });
-  const candleList = await marketData.fetchCandles();
-  const item = new Candle(candleList[0]);
-  if (!initBuy) {
-    myAccount[market.market].buy(myAccount[market.market].money, item.trade_price);
+  const MARKET_LENGTH = Object.keys(myAccount).length;
+
+  let initBuy = false;
+  const watch = async (market) => {
+    const marketData = new CandleList({
+      market: market.market,
+      count: 1,
+      minutes: 1,
+    });
+    const candleList = await marketData.fetchCandles();
+    const item = new Candle(candleList[0]);
+    if (!initBuy) {
+      myAccount[market.market].buy(myAccount[market.market].money, item.trade_price);
+    }
+    const result = myAccount[market.market].result(item.trade_price, item.opening_price);
+    tdo += item.calc_trade_diff_opening;
+    hdo += item.calc_high_diff_opening;
+    ldo += item.calc_low_diff_opening;
+    val += result.value;
   }
-  const result = myAccount[market.market].result(item.trade_price, item.opening_price);
-  tdo += item.calc_trade_diff_opening;
-  hdo += item.calc_high_diff_opening;
-  ldo += item.calc_low_diff_opening;
-  val += result.value;
-}
 
-let index = 0;
-let tdo = 0;
-let hdo = 0;
-let ldo = 0;
-let val = 0;
+  let index = 0;
+  let tdo = 0;
+  let hdo = 0;
+  let ldo = 0;
+  let val = 0;
 
 
-console.log(`========= 리스너 시작(1분 감시): ${moment().format('MM월 DD일 HH시 mm분 ss초')} ==========`)
-setInterval(() => {
-  if (index === MARKET_LENGTH) {
-    index = 0;
-    initBuy = true;
-    const avgVal = val / MARKET_LENGTH;
-    console.log(`현재 시간: ${moment().format('MM월 DD일 HH시 mm분 ss초')}`)
-    console.log(
-      chalk.green(`가격 변동:\t`),
-      tdo > 0 ?
-      chalk.redBright(`${tdo >= 0 ? '+' : ''}${(tdo / MarketList.length).toFixed(4)}%\t\t`):
-      chalk.blueBright(`${tdo >= 0 ? '+' : ''}${(tdo / MarketList.length).toFixed(4)}%\t\t`),
-    );
-    console.log(
-      chalk.green(`상한 강도:\t`),
-      chalk.redBright(`+${(hdo / MarketList.length).toFixed(4)}%\t\t`),
-    );
-    console.log(
-      chalk.green(`하한 강도:\t`),
-      chalk.blueBright(`${(ldo / MarketList.length).toFixed(4)}%\t\t`),
-    );
-    console.log(
-      chalk.green(`가치 총액:\t`),
-      chalk.yellow(`${comma(avgVal)}원\t\t`),
-    );
-    console.log(
-      chalk.green(`전체 수익:\t`),
-      avgVal > initMoney ?
-        chalk.red(`+${comma(avgVal - initMoney)}원\t\t`) :
-        chalk.blue(`${comma(avgVal - initMoney)}원\t\t`),
-    );
-    tdo = 0;
-    hdo = 0;
-    ldo = 0;
-    val = 0;
-  }
-  watch(MarketList[index]);
-  index += 1;
-}, 220);
+  console.log(`========= 리스너 시작(1분 감시): ${moment().format('MM월 DD일 HH시 mm분 ss초')} ==========`)
+  setInterval(() => {
+    if (index === MARKET_LENGTH) {
+      index = 0;
+      initBuy = true;
+      const avgVal = val / MARKET_LENGTH;
+      console.log(`현재 시간: ${moment().format('MM월 DD일 HH시 mm분 ss초')}`)
+      console.log(
+        chalk.green(`가격 변동:\t`),
+        tdo > 0 ?
+        chalk.redBright(`${tdo >= 0 ? '+' : ''}${(tdo / MarketList.length).toFixed(4)}%\t\t`):
+        chalk.blueBright(`${tdo >= 0 ? '+' : ''}${(tdo / MarketList.length).toFixed(4)}%\t\t`),
+      );
+      console.log(
+        chalk.green(`상한 강도:\t`),
+        chalk.redBright(`+${(hdo / MarketList.length).toFixed(4)}%\t\t`),
+      );
+      console.log(
+        chalk.green(`하한 강도:\t`),
+        chalk.blueBright(`${(ldo / MarketList.length).toFixed(4)}%\t\t`),
+      );
+      console.log(
+        chalk.green(`가치 총액:\t`),
+        chalk.yellow(`${comma(avgVal)}원\t\t`),
+      );
+      console.log(
+        chalk.green(`전체 수익:\t`),
+        avgVal > initMoney ?
+          chalk.red(`+${comma(avgVal - initMoney)}원\t\t`) :
+          chalk.blue(`${comma(avgVal - initMoney)}원\t\t`),
+      );
+      tdo = 0;
+      hdo = 0;
+      ldo = 0;
+      val = 0;
+    }
+    watch(MarketList[index]);
+    index += 1;
+  }, 220);
+
+});
